@@ -108,6 +108,16 @@ type ConnectAction struct {
 	SteamID     uint64 `json:"steamID"`
 }
 
+type MVP struct {
+	SteamID uint64 `json:"steamID"`
+	Reason  int    `json:"reason"`
+}
+
+type PlayerScore struct {
+	SteamID uint64 `json:"steamID"`
+	Score   int    `json:"score"`
+}
+
 // GameRound contains round info and events
 type GameRound struct {
 	RoundNum             int64              `json:"roundNum"`
@@ -142,6 +152,8 @@ type GameRound struct {
 	WeaponFires          []WeaponFireAction `json:"weaponFires"`
 	Flashes              []FlashAction      `json:"flashes"`
 	Frames               []GameFrame        `json:"frames"`
+	MVP                  MVP                `json:"mvp"`
+	PlayerScores         []PlayerScore      `json:"playerScores"`
 }
 
 // PlayerTeam
@@ -780,6 +792,7 @@ func main() {
 	currentRound.Grenades = []GrenadeAction{}
 	currentRound.Kills = []KillAction{}
 	currentRound.WeaponFires = []WeaponFireAction{}
+	currentRound.PlayerScores = []PlayerScore{}
 
 	RoundRestartDelay := int64(5)
 
@@ -989,6 +1002,7 @@ func main() {
 		currentRound.Grenades = []GrenadeAction{}
 		currentRound.Kills = []KillAction{}
 		currentRound.WeaponFires = []WeaponFireAction{}
+		currentRound.PlayerScores = []PlayerScore{}
 
 		// Parse flags
 		currentRound.IsWarmup = gs.IsWarmupPeriod()
@@ -1305,6 +1319,22 @@ func main() {
 				currentRound.WinningTeam = &tTeam
 			}
 		}
+
+		tPlayers := gs.TeamTerrorists().Members()
+		ctPlayers := gs.TeamCounterTerrorists().Members()
+		for _, p := range tPlayers {
+			currentRound.PlayerScores = append(currentRound.PlayerScores, PlayerScore{
+				SteamID: p.SteamID64,
+				Score:   p.Score(),
+			})
+		}
+		for _, p := range ctPlayers {
+			currentRound.PlayerScores = append(currentRound.PlayerScores, PlayerScore{
+				SteamID: p.SteamID64,
+				Score:   p.Score(),
+			})
+		}
+
 	})
 
 	// Parse bomb defuses
@@ -1746,6 +1776,18 @@ func main() {
 					currentRound.Grenades[i].GrenadeY = float64(grenadePos.Y)
 					currentRound.Grenades[i].GrenadeZ = float64(grenadePos.Z)
 				}
+			}
+		}
+	})
+
+	p.RegisterEventHandler(func(e events.RoundMVPAnnouncement) {
+		//gs := p.GameState()
+
+		if e.Player != nil {
+			//currentRound.MVP = MVP(e.Player.SteamID64, e.Reason)
+			currentRound.MVP = MVP{
+				SteamID: e.Player.SteamID64,
+				Reason:  int(e.Reason),
 			}
 		}
 	})
